@@ -31,3 +31,19 @@ git format-patch HEAD~1 example -o patches
 ## Example
 
 ![DiffSquirrel running in a terminal](example.png)
+
+
+## FAQ
+
+**Can this handle long diffs?**
+
+Not yet. It's something I'm hoping to work on. I don't know the exact limit yet.
+
+**How much will this cost?**
+
+With gpt-4-turbo it seems to be about 1 cent per use, though it could
+be a little bit more. It's a lot less expensive with a gpt-3 based model, which also does a decent job.
+
+**Is this real? Should I use this?**
+
+Nope. It's just for a demo.
