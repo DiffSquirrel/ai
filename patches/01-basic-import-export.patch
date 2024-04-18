@@ -1,0 +1,44 @@
+From e4e3f629710f691da19d633e20a61672d1901e4b Mon Sep 17 00:00:00 2001
+From: Jamund Ferguson <jamund@gmail.com>
+Date: Thu, 11 Feb 2021 20:14:48 -0800
+Subject: [PATCH] moving forward
+
+---
+ example/index.js | 7 ++-----
+ example/util.js  | 5 +++++
+ 2 files changed, 7 insertions(+), 5 deletions(-)
+ create mode 100644 example/util.js
+
+diff --git a/example/index.js b/example/index.js
+index b69ba10..6e847cd 100644
+--- a/example/index.js
++++ b/example/index.js
+@@ -1,3 +1,5 @@
++import { updateTitle } from "./util.js";
++
+ class Example {
+   constructor() {
+     super();
+@@ -11,8 +13,3 @@ class Example {
+     return `<button>${this.text}</button>`;
+   }
+ }
+-
+-function updateTitle(text) {
+-  document.title = text;
+-  console.log("We have updated the title to say", text);
+-}
+diff --git a/example/util.js b/example/util.js
+new file mode 100644
+index 0000000..20a3492
+--- /dev/null
++++ b/example/util.js
+@@ -0,0 +1,5 @@
++// util file
++export function updateTitle(text) {
++  document.title = text;
++  console.log("We have updated the title to say", text);
++}
+-- 
+2.24.0
+

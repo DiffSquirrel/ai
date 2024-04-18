@@ -1,0 +1,46 @@
+From ee0a8d41f786c18b42c414059071c082c11542e9 Mon Sep 17 00:00:00 2001
+From: Jordan Thomson <jordan.thomson@alexsolutions.com.au>
+Date: Thu, 6 Aug 2020 16:19:14 +1000
+Subject: [PATCH] included check for string literal 'error'
+
+---
+ __tests__/prefer-await-to-callbacks.js | 8 ++++++++
+ rules/prefer-await-to-callbacks.js     | 6 +++++-
+ 2 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/__tests__/prefer-await-to-callbacks.js b/__tests__/prefer-await-to-callbacks.js
+index 47e7550..3cee507 100644
+--- a/__tests__/prefer-await-to-callbacks.js
++++ b/__tests__/prefer-await-to-callbacks.js
+@@ -51,6 +51,14 @@ ruleTester.run('prefer-await-to-callbacks', rule, {
+     {
+       code: 'callback()',
+       errors: [{ message }]
++    },
++    {
++      code: 'heart(error => {})',
++      errors: [{ message }]
++    },
++    {
++      code: 'heart(function(error) {})',
++      errors: [{ message }]
+     }
+   ]
+ })
+diff --git a/rules/prefer-await-to-callbacks.js b/rules/prefer-await-to-callbacks.js
+index 792556a..543ad84 100644
+--- a/rules/prefer-await-to-callbacks.js
++++ b/rules/prefer-await-to-callbacks.js
+@@ -50,7 +50,11 @@ module.exports = {
+           ) {
+             return
+           }
+-          if (arg.params && arg.params[0] && arg.params[0].name === 'err') {
++          if (
++            arg.params &&
++            arg.params[0] &&
++            (arg.params[0].name === 'err' || arg.params[0].name === 'error')
++          ) {
+             if (!isInsideYieldOrAwait()) {
+               context.report({ node: arg, messageId: 'error' })
+             }

@@ -1,0 +1,307 @@
+From ad9c7f86f033cfdc0ce90ffc7ecde2aaed3759ae Mon Sep 17 00:00:00 2001
+From: Macklin Underdown <macklinu@users.noreply.github.com>
+Date: Mon, 5 Feb 2018 17:06:42 -0500
+Subject: [PATCH 1/3] feat(rule): add no-new-statics rule
+
+Resolves #75
+---
+ README.md                    |  3 +++
+ __tests__/no-new-statics.js  | 26 ++++++++++++++++++++++++++
+ docs/rules/no-new-statics.md |  1 +
+ index.js                     |  2 ++
+ rules/lib/is-promise.js      |  4 ++--
+ rules/lib/promise-statics.js |  3 +++
+ rules/no-new-statics.js      | 28 ++++++++++++++++++++++++++++
+ 7 files changed, 65 insertions(+), 2 deletions(-)
+ create mode 100644 __tests__/no-new-statics.js
+ create mode 100644 docs/rules/no-new-statics.md
+ create mode 100644 rules/lib/promise-statics.js
+ create mode 100644 rules/no-new-statics.js
+
+diff --git a/README.md b/README.md
+index 73f63e0..7477e9e 100644
+--- a/README.md
++++ b/README.md
+@@ -61,6 +61,7 @@ Then configure the rules you want to use under the rules section.
+     "promise/no-promise-in-callback": "warn",
+     "promise/no-callback-in-promise": "warn",
+     "promise/avoid-new": "warn",
++    "promise/no-new-statics": "warn",
+     "promise/no-return-in-finally": "warn"
+   }
+ }
+@@ -87,6 +88,7 @@ or start with the recommended rule set
+ | [`no-promise-in-callback`][no-promise-in-callback]       | Avoid using promises inside of callbacks                                         | :warning:   |          |
+ | [`no-callback-in-promise`][no-callback-in-promise]       | Avoid calling `cb()` inside of a `then()` (use [nodeify][] instead)              | :warning:   |          |
+ | [`avoid-new` ][avoid-new]                                | Avoid creating `new` promises outside of utility libs (use [pify][] instead)     | :warning:   |          |
++| [`no-new-statics`][no-new-statics]                       | Avoid calling `new` on a Promise static method (e.g. `new Promise.resolve()`)    | :bangbang:  |          |
+ | [`no-return-in-finally`][no-return-in-finally]           | Disallow return statements in `finally()`                                        | :warning:   |          |
+ | [`prefer-await-to-then`][prefer-await-to-then]           | Prefer `await` to `then()` for reading Promise values                            | :seven:     |          |
+ | [`prefer-await-to-callbacks`][prefer-await-to-callbacks] | Prefer async/await to the callback pattern                                       | :seven:     |          |
+@@ -119,6 +121,7 @@ or start with the recommended rule set
+ [no-promise-in-callback]: docs/rules/no-promise-in-callback.md
+ [no-callback-in-promise]: docs/rules/no-callback-in-promise.md
+ [avoid-new]: docs/rules/avoid-new.md
++[no-new-statics]: docs/rules/no-new-statics.md
+ [no-return-in-finally]: docs/rules/no-return-in-finally.md
+ [prefer-await-to-then]: docs/rules/prefer-await-to-then.md
+ [prefer-await-to-callbacks]: docs/rules/prefer-await-to-callbacks.md
+diff --git a/__tests__/no-new-statics.js b/__tests__/no-new-statics.js
+new file mode 100644
+index 0000000..b8aa2af
+--- /dev/null
++++ b/__tests__/no-new-statics.js
+@@ -0,0 +1,26 @@
++'use strict'
++
++const rule = require('../rules/no-new-statics')
++const RuleTester = require('eslint').RuleTester
++const ruleTester = new RuleTester()
++
++const message = 'Avoid calling new on a Promise static method'
++
++ruleTester.run('no-new-statics', rule, {
++  valid: [
++    'Promise.resolve()',
++    'Promise.reject()',
++    'Promise.all()',
++    'Promise.race()',
++    'new Promise(function (resolve, reject) {})',
++    'new SomeClass()',
++    'SomeClass.resolve()',
++    'new SomeClass.resolve()'
++  ],
++  invalid: [
++    { code: 'new Promise.resolve()', errors: [{ message }] },
++    { code: 'new Promise.reject()', errors: [{ message }] },
++    { code: 'new Promise.all()', errors: [{ message }] },
++    { code: 'new Promise.race()', errors: [{ message }] }
++  ]
++})
+diff --git a/docs/rules/no-new-statics.md b/docs/rules/no-new-statics.md
+new file mode 100644
+index 0000000..92061d0
+--- /dev/null
++++ b/docs/rules/no-new-statics.md
+@@ -0,0 +1 @@
++# Avoid calling `new` on a Promise static method (e.g. `new Promise.resolve()`) (no-new-statics)
+diff --git a/index.js b/index.js
+index 79e2c8b..8d2bbe3 100644
+--- a/index.js
++++ b/index.js
+@@ -13,6 +13,7 @@ module.exports = {
+     'no-promise-in-callback': require('./rules/no-promise-in-callback'),
+     'no-nesting': require('./rules/no-nesting'),
+     'avoid-new': require('./rules/avoid-new'),
++    'no-new-statics': require('./rules/no-new-statics'),
+     'no-return-in-finally': require('./rules/no-return-in-finally')
+   },
+   rulesConfig: {
+@@ -34,6 +35,7 @@ module.exports = {
+         'promise/no-promise-in-callback': 'warn',
+         'promise/no-callback-in-promise': 'warn',
+         'promise/avoid-new': 'warn',
++        'promise/no-new-statics': 'error',
+         'promise/no-return-in-finally': 'warn'
+       }
+     }
+diff --git a/rules/lib/is-promise.js b/rules/lib/is-promise.js
+index 820c145..01a6d92 100644
+--- a/rules/lib/is-promise.js
++++ b/rules/lib/is-promise.js
+@@ -4,7 +4,7 @@
+  */
+ 'use strict'
+ 
+-const STATIC_METHODS = ['all', 'race', 'reject', 'resolve']
++const PROMISE_STATICS = require('./promise-statics')
+ 
+ function isPromise(expression) {
+   return (
+@@ -29,7 +29,7 @@ function isPromise(expression) {
+       expression.callee.type === 'MemberExpression' &&
+       expression.callee.object.type === 'Identifier' &&
+       expression.callee.object.name === 'Promise' &&
+-      STATIC_METHODS.indexOf(expression.callee.property.name) !== -1)
++      PROMISE_STATICS.indexOf(expression.callee.property.name) !== -1)
+   )
+ }
+ 
+diff --git a/rules/lib/promise-statics.js b/rules/lib/promise-statics.js
+new file mode 100644
+index 0000000..0fadf31
+--- /dev/null
++++ b/rules/lib/promise-statics.js
+@@ -0,0 +1,3 @@
++'use strict'
++
++module.exports = ['all', 'race', 'reject', 'resolve']
+diff --git a/rules/no-new-statics.js b/rules/no-new-statics.js
+new file mode 100644
+index 0000000..604c959
+--- /dev/null
++++ b/rules/no-new-statics.js
+@@ -0,0 +1,28 @@
++'use strict'
++
++const PROMISE_STATICS = require('./lib/promise-statics')
++const getDocsUrl = require('./lib/get-docs-url')
++
++module.exports = {
++  meta: {
++    docs: {
++      url: getDocsUrl('no-new-statics')
++    }
++  },
++  create(context) {
++    return {
++      NewExpression(node) {
++        if (
++          node.callee.type === 'MemberExpression' &&
++          node.callee.object.name === 'Promise' &&
++          PROMISE_STATICS.indexOf(node.callee.property.name) > -1
++        ) {
++          context.report({
++            node,
++            message: 'Avoid calling new on a Promise static method'
++          })
++        }
++      }
++    }
++  }
++}
+
+From 8c50766c588e5793c84666fbf6b2b8e9e0467264 Mon Sep 17 00:00:00 2001
+From: Macklin Underdown <macklinu@users.noreply.github.com>
+Date: Sun, 25 Feb 2018 13:48:32 -0500
+Subject: [PATCH 2/3] docs: update no-new-statics documentation
+
+---
+ README.md                    |  4 ++--
+ docs/rules/no-new-statics.md | 33 ++++++++++++++++++++++++++++++++-
+ 2 files changed, 34 insertions(+), 3 deletions(-)
+
+diff --git a/README.md b/README.md
+index 7477e9e..9ac9474 100644
+--- a/README.md
++++ b/README.md
+@@ -61,7 +61,7 @@ Then configure the rules you want to use under the rules section.
+     "promise/no-promise-in-callback": "warn",
+     "promise/no-callback-in-promise": "warn",
+     "promise/avoid-new": "warn",
+-    "promise/no-new-statics": "warn",
++    "promise/no-new-statics": "error",
+     "promise/no-return-in-finally": "warn"
+   }
+ }
+@@ -88,7 +88,7 @@ or start with the recommended rule set
+ | [`no-promise-in-callback`][no-promise-in-callback]       | Avoid using promises inside of callbacks                                         | :warning:   |          |
+ | [`no-callback-in-promise`][no-callback-in-promise]       | Avoid calling `cb()` inside of a `then()` (use [nodeify][] instead)              | :warning:   |          |
+ | [`avoid-new` ][avoid-new]                                | Avoid creating `new` promises outside of utility libs (use [pify][] instead)     | :warning:   |          |
+-| [`no-new-statics`][no-new-statics]                       | Avoid calling `new` on a Promise static method (e.g. `new Promise.resolve()`)    | :bangbang:  |          |
++| [`no-new-statics`][no-new-statics]                       | Avoid calling `new` on a Promise static method                                   | :bangbang:  |          |
+ | [`no-return-in-finally`][no-return-in-finally]           | Disallow return statements in `finally()`                                        | :warning:   |          |
+ | [`prefer-await-to-then`][prefer-await-to-then]           | Prefer `await` to `then()` for reading Promise values                            | :seven:     |          |
+ | [`prefer-await-to-callbacks`][prefer-await-to-callbacks] | Prefer async/await to the callback pattern                                       | :seven:     |          |
+diff --git a/docs/rules/no-new-statics.md b/docs/rules/no-new-statics.md
+index 92061d0..5d40590 100644
+--- a/docs/rules/no-new-statics.md
++++ b/docs/rules/no-new-statics.md
+@@ -1 +1,32 @@
+-# Avoid calling `new` on a Promise static method (e.g. `new Promise.resolve()`) (no-new-statics)
++# Avoid calling `new` on a Promise static method (no-new-statics)
++
++Calling a Promise static method with `new` is invalid, resulting in a
++`TypeError` at runtime.
++
++## Rule Details
++
++This rule is aimed at flagging instances where a Promise static method is called
++with `new`.
++
++Examples for **incorrect** code for this rule:
++
++```js
++new Promise.resolve(value)
++new Promise.reject(error)
++new Promise.race([p1, p2])
++new Promise.all([p1, p2])
++```
++
++Examples for **correct** code for this rule:
++
++```js
++Promise.resolve(value)
++Promise.reject(error)
++Promise.race([p1, p2])
++Promise.all([p1, p2])
++```
++
++## When Not To Use It
++
++If you do not want to be notified when calling `new` on a Promise static method,
++you can safely disable this rule.
+
+From 2db7c7ff33024f88c9c2fe18cdca68694f36a685 Mon Sep 17 00:00:00 2001
+From: Macklin Underdown <macklinu@users.noreply.github.com>
+Date: Sun, 25 Feb 2018 13:52:01 -0500
+Subject: [PATCH 3/3] fix: improve no-new-statics messaging
+
+---
+ __tests__/no-new-statics.js | 22 ++++++++++++++++------
+ rules/no-new-statics.js     |  3 ++-
+ 2 files changed, 18 insertions(+), 7 deletions(-)
+
+diff --git a/__tests__/no-new-statics.js b/__tests__/no-new-statics.js
+index b8aa2af..1815cc2 100644
+--- a/__tests__/no-new-statics.js
++++ b/__tests__/no-new-statics.js
+@@ -4,8 +4,6 @@ const rule = require('../rules/no-new-statics')
+ const RuleTester = require('eslint').RuleTester
+ const ruleTester = new RuleTester()
+ 
+-const message = 'Avoid calling new on a Promise static method'
+-
+ ruleTester.run('no-new-statics', rule, {
+   valid: [
+     'Promise.resolve()',
+@@ -18,9 +16,21 @@ ruleTester.run('no-new-statics', rule, {
+     'new SomeClass.resolve()'
+   ],
+   invalid: [
+-    { code: 'new Promise.resolve()', errors: [{ message }] },
+-    { code: 'new Promise.reject()', errors: [{ message }] },
+-    { code: 'new Promise.all()', errors: [{ message }] },
+-    { code: 'new Promise.race()', errors: [{ message }] }
++    {
++      code: 'new Promise.resolve()',
++      errors: [{ message: "Avoid calling 'new' on 'Promise.resolve()'" }]
++    },
++    {
++      code: 'new Promise.reject()',
++      errors: [{ message: "Avoid calling 'new' on 'Promise.reject()'" }]
++    },
++    {
++      code: 'new Promise.all()',
++      errors: [{ message: "Avoid calling 'new' on 'Promise.all()'" }]
++    },
++    {
++      code: 'new Promise.race()',
++      errors: [{ message: "Avoid calling 'new' on 'Promise.race()'" }]
++    }
+   ]
+ })
+diff --git a/rules/no-new-statics.js b/rules/no-new-statics.js
+index 604c959..511a680 100644
+--- a/rules/no-new-statics.js
++++ b/rules/no-new-statics.js
+@@ -19,7 +19,8 @@ module.exports = {
+         ) {
+           context.report({
+             node,
+-            message: 'Avoid calling new on a Promise static method'
++            message: "Avoid calling 'new' on 'Promise.{{ name }}()'",
++            data: { name: node.callee.property.name }
+           })
+         }
+       }

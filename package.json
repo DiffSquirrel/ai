@@ -1,0 +1,29 @@
+{
+  "name": "@diffsquirrel/ai",
+  "version": "1.0.0",
+  "description": "AI based tool for summarizing git diffs",
+  "main": "index.mjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DiffSquirrel/ai.git"
+  },
+  "keywords": [
+    "ai",
+    "diff",
+    "git"
+  ],
+  "author": "Jamund Ferguson",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/DiffSquirrel/ai/issues"
+  },
+  "homepage": "https://github.com/DiffSquirrel/ai#readme",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "openai": "^4.38.0"
+  },
+  "type": "module"
+}
