@@ -1,4 +1,4 @@
-# DiffSquirrel ai
+# DiffSquirrel AI 🐿️
 
 AI-based tool for summarising git diffs
 
